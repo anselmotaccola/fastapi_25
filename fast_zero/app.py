@@ -104,24 +104,27 @@ def read_users(
     '/users/{user_id}/', status_code=HTTPStatus.OK, response_model=UserPublic
 )
 def update_user(
-    user_id: int, user: UserSchema, session: Session = Depends(get_session)
+    user_id: int,
+    user: UserSchema,
+    session: Session = Depends(get_session),
+    current_user=Depends(get_current_user),
 ):
-    user_db = session.scalar(select(User).where(User.id == user_id))
-
-    if not user_db:
+    if current_user.id != user_id:
         raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail='User not found'
+            status_code=HTTPStatus.FORBIDDEN,
+            detail='You do not have permission to update this user',
         )
     try:
-        user_db.email = user.email
-        user_db.username = user.username
-        user_db.password = get_password_hash(user.password)
+        current_user.email = user.email
+        current_user.username = user.username
+        current_user.password = get_password_hash(user.password)
 
-        session.add(user_db)
+        session.add(current_user)
         session.commit()
-        session.refresh(user_db)
+        session.refresh(current_user)
 
-        return user_db
+        return current_user
+
     except IntegrityError:
         raise HTTPException(
             detail='Username or Email already exists',
@@ -132,13 +135,18 @@ def update_user(
 @app.delete(
     '/users/{user_id}/', status_code=HTTPStatus.OK, response_model=Message
 )
-def delete_user(user_id: int, session: Session = Depends(get_session)):
-    db_user = session.scalar(select(User).where(User.id == user_id))
-    if not db_user:
+def delete_user(
+    user_id: int,
+    session: Session = Depends(get_session),
+    current_user=Depends(get_current_user),
+):
+    if current_user.id != user_id:
         raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail='User not found'
+            status_code=HTTPStatus.FORBIDDEN,
+            detail='You do not have permission to update this user',
         )
-    session.delete(db_user)
+
+    session.delete(current_user)
     session.commit()
 
     return {'message': 'User deleted successfully'}

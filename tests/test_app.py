@@ -1,6 +1,7 @@
 from http import HTTPStatus
 
 from fast_zero.schemas import UserPublic
+from fast_zero.security import create_access_token
 
 
 def test_root_deve_retornar_ola_mundo(client):
@@ -38,9 +39,8 @@ def test_create_user(client):
 def test_read_users(client, user, token):
     user_schema = UserPublic.model_validate(user).model_dump()
     response = client.get(
-        '/users/',
-        headers={'Authorization': f'Bearer {token}'}
-)
+        '/users/', headers={'Authorization': f'Bearer {token}'}
+    )
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'users': [user_schema]}
@@ -70,9 +70,10 @@ def test_get_user_not_found(client):
     assert response.status_code == HTTPStatus.NOT_FOUND
 
 
-def test_update_user(client, user):
+def test_update_user(client, user, token):
     response = client.put(
-        '/users/1',
+        f'/users/{user.id}',
+        headers={'Authorization': f'Bearer {token}'},
         json={'password': 'bob', 'email': 'bob@test.com', 'username': 'bob'},
     )
 
@@ -84,50 +85,35 @@ def test_update_user(client, user):
     }
 
 
-def test_update_user_not_found(client):
+def test_update_user_not_Auto(client, user):
+    data = {'sub': 'test@test'}
+    token = create_access_token(data)
     response = client.put(
-        '/users/100',
+        '/users/-1',
+        headers={'Authorization': f'Bearer {token}'},
         json={'password': 'bob', 'email': 'bob@test.com', 'username': 'bob'},
     )
 
-    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json() == {
+        'detail': 'Invalid authentication credentials'
+    }
 
 
-def test_update_user_not_found_negativo(client):
-    response = client.put(
-        '/users/-10',
-        json={'password': 'bob', 'email': 'bob@test.com', 'username': 'bob'},
+def test_delete_user(client, user, token):
+    response = client.delete(
+        f'/users/{user.id}',
+        headers={'Authorization': f'Bearer {token}'},
     )
-
-    assert response.status_code == HTTPStatus.NOT_FOUND
-
-
-def test_delete_user(client, user):
-    response = client.delete('/users/1')
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'message': 'User deleted successfully'}
 
 
-def test_delete_user_not_found(client):
-    response = client.delete(
-        '/users/100',
-    )
-
-    assert response.status_code == HTTPStatus.NOT_FOUND
-
-
-def test_delete_user_not_found_negativo(client):
-    response = client.delete(
-        '/users/-10',
-    )
-
-    assert response.status_code == HTTPStatus.NOT_FOUND
-
-
-def test_update_integrity_error(client, user):
+def test_update_integrity_error(client, user, token):
     client.post(
         '/users/',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'fausto',
             'email': 'fausto@test.com',
@@ -136,6 +122,7 @@ def test_update_integrity_error(client, user):
     )
     response_update = client.put(
         f'/users/{user.id}',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'fausto',
             'email': 'fausto@test.com',
@@ -202,3 +189,49 @@ def test_get_token(client, user):
     assert response.status_code == HTTPStatus.OK
     assert 'access_token' in response.json()
     assert response.json()['token_type'] == 'bearer'
+
+
+def test_get_token_invalid_credentials_pasword(client, user):
+    response = client.post(
+        '/token',
+        data={'username': user.email, 'password': 'wrongpassword'},
+    )
+
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json() == {'detail': 'Invalid credentials'}
+
+
+def test_get_token_invalid_credentials_ex(client):
+    data = {'no-username': 'test'}
+    token = create_access_token(data)
+
+    response = client.delete(
+        '/users/1',
+        headers={'Authorization': f'Bearer {token}'},
+    )
+
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json() == {'detail': 'Invalid authentication credentials'}
+
+
+def test_get_token_invalid_token(client):
+    response = client.delete(
+        '/users/1',
+        headers={'Authorization': 'Bearer toeken_invalid'},
+    )
+
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json() == {'detail': 'Invalid authentication credentials'}
+
+
+def test_get_current_user_does_not_exists__ex(client):
+    data = {'sub': 'test@test'}
+    token = create_access_token(data)
+
+    response = client.delete(
+        '/users/10',
+        headers={'Authorization': f'Bearer {token}'},
+    )
+
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json() == {'detail': 'Invalid authentication credentials'}
