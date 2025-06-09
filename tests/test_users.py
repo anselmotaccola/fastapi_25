@@ -25,8 +25,7 @@ def test_create_user(client):
 def test_read_users(client, user, token):
     user_schema = UserPublic.model_validate(user).model_dump()
     response = client.get(
-        '/users/',
-        headers={'Authorization': f'Bearer {token}'}
+        '/users/', headers={'Authorization': f'Bearer {token}'}
     )
 
     assert response.status_code == HTTPStatus.OK
@@ -82,7 +81,7 @@ def test_update_user_not_Auto(client, user):
     )
 
     assert response.status_code == HTTPStatus.UNAUTHORIZED
-    assert response.json() == {'detail': 'Invalid authentication credentials'}
+    assert response.json() == {'detail': 'Could not validate credentials'}
 
 
 def test_delete_user(client, user, token):
@@ -175,4 +174,4 @@ def test_get_current_user_does_not_exists__ex(client):
     )
 
     assert response.status_code == HTTPStatus.UNAUTHORIZED
-    assert response.json() == {'detail': 'Invalid authentication credentials'}
+    assert response.json() == {'detail': 'Could not validate credentials'}

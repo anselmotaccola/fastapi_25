@@ -33,19 +33,19 @@ def test_get_token_invalid_credentials_ex(client):
         headers={'Authorization': f'Bearer {token}'},
     )
 
-    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
-    # assert response.json() == {
-    #     'detail': 'You do not have permission to update this user'
-    # }
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json() == {
+        'detail': 'Could not validate credentials'
+    }
 
 
 def test_get_token_invalid_token(client):
     response = client.delete(
         '/users/1',
-        headers={'Authorization': 'Bearer toeken_invalid'},
+        headers={'Authorization': 'Bearertoeken_invalid'},
     )
 
-    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
-    # assert response.json() == {
-    #     'detail': 'You do not have permission to update this user'
-    # }
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json() == {
+        'detail': 'Not authenticated'
+    }

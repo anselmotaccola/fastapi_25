@@ -49,25 +49,28 @@ def create_access_token(data: dict):
 
 
 def get_current_user(
-    settings,
     session: Session = Depends(get_session),
     token: str = Depends(auth2_scheme),
 ):
     credentials_exception = HTTPException(
         status_code=HTTPStatus.UNAUTHORIZED,
-        detail='Invalid authentication credentials',
+        detail='Could not validate credentials',
         headers={'WWW-Authenticate': 'Bearer'},
     )
     try:
         payload = decode(
-            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+            token, settings.SECRET_KEY, algorithms=settings.ALGORITHM
         )
         subject_email = payload.get('sub')
+
         if not subject_email:
             raise credentials_exception
     except DecodeError:
         raise credentials_exception
+
     user = session.scalar(select(User).where(User.email == subject_email))
+
     if not user:
         raise credentials_exception
+
     return user
