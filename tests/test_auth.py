@@ -34,9 +34,7 @@ def test_get_token_invalid_credentials_ex(client):
     )
 
     assert response.status_code == HTTPStatus.UNAUTHORIZED
-    assert response.json() == {
-        'detail': 'Could not validate credentials'
-    }
+    assert response.json() == {'detail': 'Could not validate credentials'}
 
 
 def test_get_token_invalid_token(client):
@@ -46,6 +44,4 @@ def test_get_token_invalid_token(client):
     )
 
     assert response.status_code == HTTPStatus.UNAUTHORIZED
-    assert response.json() == {
-        'detail': 'Not authenticated'
-    }
+    assert response.json() == {'detail': 'Not authenticated'}
