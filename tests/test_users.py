@@ -34,7 +34,7 @@ def test_read_users(client, user, token):
 
 def test_read_user(client, user):
     user_schema = UserPublic.model_validate(user).model_dump()
-    response = client.get('/users/1')
+    response = client.get(f'/users/{user.id}')
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == user_schema
@@ -71,7 +71,7 @@ def test_update_user(client, user, token):
     }
 
 
-def test_update_user_not_Auto(client, user):
+def test_update_user_not_Auth(client, user):
     data = {'sub': 'test@test'}
     token = create_access_token(data)
     response = client.put(
@@ -94,21 +94,12 @@ def test_delete_user(client, user, token):
     assert response.json() == {'message': 'User deleted successfully'}
 
 
-def test_update_integrity_error(client, user, token):
-    client.post(
-        '/users/',
-        headers={'Authorization': f'Bearer {token}'},
-        json={
-            'username': 'fausto',
-            'email': 'fausto@test.com',
-            'password': 'secret',
-        },
-    )
+def test_update_integrity_error(client, user, other_user, token):
     response_update = client.put(
         f'/users/{user.id}',
         headers={'Authorization': f'Bearer {token}'},
         json={
-            'username': 'fausto',
+            'username': other_user.username,
             'email': 'fausto@test.com',
             'password': 'teste',
         },
@@ -175,3 +166,26 @@ def test_get_current_user_does_not_exists__ex(client):
 
     assert response.status_code == HTTPStatus.UNAUTHORIZED
     assert response.json() == {'detail': 'Could not validate credentials'}
+
+
+def test_update_user_with_wrong_user(client, other_user, token):
+    response = client.put(
+        f'/users/{other_user.id}',
+        headers={'Authorization': f'Bearer {token}'},
+        json={'password': 'bob', 'email': 'bob@test.com', 'username': 'bob'},
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert response.json() == {
+        'detail': 'You do not have permission to update this user'
+    }
+
+
+def test_delete_user_with_wrong_user(client, other_user, token):
+    response = client.delete(
+        f'/users/{other_user.id}',
+        headers={'Authorization': f'Bearer {token}'},
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert response.json() == {
+        'detail': 'You do not have permission to update this user'
+    }
