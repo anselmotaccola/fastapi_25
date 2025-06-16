@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fast_zero.models import User
+from fast_zero.models import Todo, User
 
 
 @pytest.mark.asyncio
@@ -26,6 +26,23 @@ async def test_create_user(session: AsyncSession, mock_db_time):
         'username': 'Seth',
         'email': 'seth@seth.com',
         'password': 'seth123',
+        'todos': [],
         'created_at': time,
         'updated_at': time,
     }
+
+
+@pytest.mark.asyncio
+async def test_create_todo_error(session, user: User):
+    todo = Todo(
+        title='Test Todo',
+        description='This is a test todo item.',
+        state='test',
+        user_id=user.id,
+    )
+
+    session.add(todo)
+    await session.commit()
+
+    with pytest.raises(LookupError):
+        await session.scalar(select(Todo))
