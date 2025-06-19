@@ -1,0 +1,26 @@
+services:
+
+  fastzero_database:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: fastapi
+      POSTGRES_PASSWORD: fastapi1
+      POSTGRES_DB: fatdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  fastazero_app:
+    image: fastazero_app
+    entrypoint: ./entrypoint.sh
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - fastzero_database
+    environment:
+      DATABASE_URL: postgresql+psycopg://fastapi:fastapi1@fastzero_database:5432/fatdb
+
+volumes:
+  pgdata:
